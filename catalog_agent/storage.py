@@ -2,13 +2,28 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from catalog_agent.models import Product
 
+LOGGER = logging.getLogger(__name__)
+
 
 class CrawlStore:
+    @classmethod
+    def has_resumable_state(cls, output_dir: Path) -> bool:
+        """Return whether an earlier crawl left checkpointed or raw state."""
+        state_dir = output_dir / "state"
+        return any(
+            path.is_file() and path.stat().st_size > 0
+            for path in (
+                state_dir / "checkpoint.json",
+                state_dir / "products.jsonl",
+            )
+        )
+
     def __init__(self, output_dir: Path, *, resume: bool) -> None:
         self.output_dir = output_dir
         self.state_dir = output_dir / "state"
@@ -58,8 +73,11 @@ class CrawlStore:
                 + "\n"
             )
 
-    def export(self) -> tuple[Path, Path, int]:
-        products = self._deduplicated_products()
+    def export(
+        self, products: list[dict[str, Any]] | None = None
+    ) -> tuple[Path, Path, int]:
+        if products is None:
+            products = self.load_products()
         json_path = self.output_dir / "products.json"
         csv_path = self.output_dir / "products.csv"
         self._atomic_json(json_path, products)
@@ -72,16 +90,26 @@ class CrawlStore:
         data = json.loads(self.checkpoint_path.read_text(encoding="utf-8"))
         return set(data.get("completed_urls", []))
 
-    def _deduplicated_products(self) -> list[dict[str, Any]]:
+    def load_products(self) -> list[dict[str, Any]]:
+        """Load append-only working state and retain the latest row per SKU."""
         if not self.raw_path.exists():
             return []
         by_sku: dict[str, dict[str, Any]] = {}
-        with self.raw_path.open(encoding="utf-8") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
+        lines = self.raw_path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if not line.strip():
+                continue
+            try:
                 product = json.loads(line)
-                by_sku[product["sku"]] = product
+            except json.JSONDecodeError:
+                if index != len(lines) - 1:
+                    raise
+                LOGGER.warning(
+                    "Ignoring incomplete final JSONL row from interrupted write",
+                    extra={"path": str(self.raw_path)},
+                )
+                continue
+            by_sku[product["sku"]] = product
         return [by_sku[sku] for sku in sorted(by_sku)]
 
     @staticmethod
@@ -113,4 +141,3 @@ class CrawlStore:
             encoding="utf-8",
         )
         temporary.replace(path)
-

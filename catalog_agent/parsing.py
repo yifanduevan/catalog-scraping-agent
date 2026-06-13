@@ -175,8 +175,8 @@ def parse_pack_size(description: str | None) -> str | None:
         return None
     patterns = [
         r"\b\d[\d,]*\s*(?:gloves?|pieces?|pcs?)?\s*(?:/|per\s+)"
-        r"(?:box|pack|case|pkg|package)\b",
-        r"\b(?:box|pack|case|pkg|package)\s+of\s+\d[\d,]*\b",
+        r"(?:bag|box|pack|case|pkg|package)\b",
+        r"\b(?:bag|box|pack|case|pkg|package)\s+of\s+\d[\d,]*\b",
         r"\b\d[\d,]*\s*(?:ct|count)\b",
     ]
     for pattern in patterns:

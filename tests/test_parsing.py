@@ -39,6 +39,7 @@ class ParsingTests(unittest.TestCase):
 
     def test_extracts_pack_sizes(self) -> None:
         self.assertEqual(parse_pack_size("X-small, 300/box"), "300/box")
+        self.assertEqual(parse_pack_size("Medium, 100/bag"), "100/bag")
         self.assertEqual(parse_pack_size("Box of 50"), "Box of 50")
         self.assertIsNone(parse_pack_size("Medium blue"))
 

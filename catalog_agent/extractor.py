@@ -122,6 +122,8 @@ class ExtractorAgent:
         if hazard:
             specifications["hazard_type"] = hazard
 
+        pack_size = parse_pack_size(variant_description)
+
         # Prefer variation-specific images, then add family images, remove
         # duplicates, and discard known placeholder URLs.
         images = self._unique_urls(
@@ -150,13 +152,14 @@ class ExtractorAgent:
                 variant.get("product_price") or variant.get("price")
             ),
             currency=self._currency(product_ld, listing),
-            unit_pack_size=parse_pack_size(variant_description),
+            unit_pack_size=pack_size,
             availability=normalize_whitespace(
                 variant.get("stock_availability_label")
                 or variant.get("stock_availability")
             )
             or None,
             description=description,
+            unit_pack_size_source="rule" if pack_size else None,
             specifications=specifications,
             image_urls=images,
             alternative_products=[],
@@ -181,6 +184,7 @@ class ExtractorAgent:
         # as missing data and fall back to the Algolia listing below.
         if not isinstance(offer, dict):
             offer = {}
+        pack_size = parse_pack_size(description)
         return Product(
             source="safcodental.com",
             source_product_id=self._string(listing.get("objectID")),
@@ -204,13 +208,14 @@ class ExtractorAgent:
                 or listing.get("price")
             ),
             currency=self._currency(product_ld, listing),
-            unit_pack_size=parse_pack_size(description),
+            unit_pack_size=pack_size,
             availability=self._availability(
                 offer.get("availability")
                 or listing.get("stock_status_label")
                 or listing.get("stock_availability")
             ),
             description=description,
+            unit_pack_size_source="rule" if pack_size else None,
             specifications=parse_description_specs(
                 product_ld.get("description")
             ),

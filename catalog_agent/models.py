@@ -46,11 +46,12 @@ class Product:
     unit_pack_size: str | None
     availability: str | None
     description: str | None
+    unit_pack_size_source: str | None = None
+    normalized_tags: list[str] = field(default_factory=list)
     specifications: dict[str, Any] = field(default_factory=dict)
     image_urls: list[str] = field(default_factory=list)
-    alternative_products: list[dict[str, str]] = field(default_factory=list)
+    alternative_products: list[dict[str, Any]] = field(default_factory=list)
     scraped_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-

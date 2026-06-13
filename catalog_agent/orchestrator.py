@@ -4,6 +4,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from catalog_agent.ai import AIEnrichmentAgent
+from catalog_agent.alternatives import InferredAlternativeMatcher
 from catalog_agent.extractor import ExtractorAgent
 from catalog_agent.http import HttpClient
 from catalog_agent.models import Category
@@ -22,6 +24,7 @@ class CrawlSummary:
     product_pages_attempted: int = 0
     product_rows_exported: int = 0
     failures: int = 0
+    interrupted: bool = False
     json_path: Path | None = None
     csv_path: Path | None = None
 
@@ -42,6 +45,8 @@ class CatalogScrapingAgent:
         client: HttpClient,
         store: CrawlStore,
         page_size: int = 50,
+        enrichment_agent: AIEnrichmentAgent | None = None,
+        alternative_matcher: InferredAlternativeMatcher | None = None,
     ) -> None:
         # Navigator and extractor share one HttpClient, so requests from both
         # agents obey the same global pacing and retry policy.
@@ -49,6 +54,8 @@ class CatalogScrapingAgent:
         self.extractor = ExtractorAgent(client)
         self.validator = ValidatorAgent()
         self.store = store
+        self.enrichment_agent = enrichment_agent
+        self.alternative_matcher = alternative_matcher
 
     def run(
         self,
@@ -100,6 +107,18 @@ class CatalogScrapingAgent:
                         # Phase 4: normalize required values, reject incomplete
                         # records, and deduplicate child SKUs within the family.
                         result = self.validator.validate(products)
+                        if self.enrichment_agent and result.products:
+                            enrichment = self.enrichment_agent.enrich(
+                                result.products
+                            )
+                            result.products = enrichment.products
+                            for error in enrichment.errors:
+                                self.store.record_failure(
+                                    url=product_url,
+                                    stage="ai_enrichment",
+                                    error=error,
+                                )
+                                summary.failures += 1
                         if result.products:
                             # Save accepted records before checkpointing the URL.
                             # This ordering avoids marking unsaved work complete.
@@ -143,9 +162,17 @@ class CatalogScrapingAgent:
                 )
                 summary.failures += 1
 
-        # Phase 5: export after all categories have been attempted. CrawlStore
-        # reloads append-only JSONL state and deduplicates globally by SKU.
-        json_path, csv_path, count = self.store.export()
+        return self.export_current(summary)
+
+    def export_current(
+        self, summary: CrawlSummary | None = None
+    ) -> CrawlSummary:
+        """Export all durable rows, including after an interrupted crawl."""
+        summary = summary or CrawlSummary()
+        final_products = self.store.load_products()
+        if self.alternative_matcher:
+            final_products = self.alternative_matcher.apply(final_products)
+        json_path, csv_path, count = self.store.export(final_products)
         summary.json_path = json_path
         summary.csv_path = csv_path
         summary.product_rows_exported = count
