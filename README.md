@@ -90,6 +90,15 @@ the page with Playwright. For this defined Safco scope, it provides the more
 stable production path. Playwright remains a useful fallback if future pages
 require JavaScript execution or stop exposing equivalent structured data.
 
+## LLM integration
+
+The scraper uses a hybrid approach: deterministic parsing handles reliable
+catalog fields first, while optional OpenAI enrichment handles ambiguous
+pack-size prose and creates normalized semantic tags. LLM pack sizes require
+supporting source evidence, and alternative products are ranked locally from
+tag similarity rather than treated as Safco-provided substitutes. This adds
+useful AI behavior without making the core crawl dependent on an LLM.
+
 ## Architecture
 
 ```text
