@@ -9,6 +9,15 @@ validates/deduplicates the result, checkpoints progress, and exports JSON/CSV.
 
 Requirements: Python 3.11+ and outbound HTTPS access.
 
+Scrape all products from both configured categories with AI enrichment,
+discarding any previous crawl state:
+
+```bash
+python3 -m catalog_agent crawl --ai-enrichment --fresh
+```
+
+For a quicker sample run:
+
 ```bash
 python3 -m catalog_agent crawl --limit-per-category 2
 ```
