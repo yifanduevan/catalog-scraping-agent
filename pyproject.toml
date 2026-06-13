@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "catalog-scraping-agent"
+version = "0.1.0"
+description = "Agent-based product catalog scraper prototype for Safco Dental"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Evan Du" }]
+dependencies = []
+
+[project.scripts]
+catalog-agent = "catalog_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["catalog_agent*"]
+
