@@ -1,7 +1,7 @@
-# Safco Catalog Scraping Agent
+# Catalog Scraping Agent
 
 A runnable proof of concept for data scraping. It
-discovers products from Safco Dental's dynamic category search, enriches them
+discovers products from dynamic category search, enriches them
 from product detail pages, expands grouped products into SKU-level rows,
 validates/deduplicates the result, checkpoints progress, and exports JSON/CSV.
 
